@@ -19,6 +19,7 @@ import org.json.JSONArray
 class DataQuzi2 : AppCompatActivity() {
     private lateinit var binding: ActivityDataQuzi2Binding
     private var alldata = arrayListOf<List<Any>>()
+    private val idList = arrayListOf<Long>()
 
     private val helper = Databeas(this)
     private var i = 0
@@ -92,12 +93,25 @@ class DataQuzi2 : AppCompatActivity() {
             select * from ryota
             where _id = ?
         """.trimIndent()
-        val dbsize = DatabaseUtils.queryNumEntries(db,"ryota").toInt()
-        val randonint = (1 .. dbsize).toList().shuffled()
+
+        val ids = """
+            SElECT _id FROM ryota
+        """.trimIndent()
+
+        val arrayId = db.rawQuery(ids, null)
+        if (arrayId.count > 0) {
+            arrayId.moveToFirst()
+            while (!arrayId.isAfterLast) {
+                idList.add(arrayId.getLong(0))
+                arrayId.moveToNext()
+            }
+        }
+
+        val ram = idList.toList().shuffled()
 
         for (i in 0 until 10) {
-            val ranid = (1000 + randonint[i]).toString()
-            val cursor = db.rawQuery(select, arrayOf(ranid))
+            val randomid = (ram[i].toString())
+            val cursor = db.rawQuery(select, arrayOf(randomid))
 
             while (cursor.moveToNext()) {
                 val id = cursor.getString(cursor.getColumnIndex("_id"))

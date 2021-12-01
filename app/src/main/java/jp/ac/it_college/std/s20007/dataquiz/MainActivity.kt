@@ -22,17 +22,17 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
-    // bindingの定義 templateurlの定義
+
     private lateinit var binding: ActivityMainBinding
     private val templateurl = "https://script.google.com/macros/s/AKfycbznWpk2m8q6lbLWSS6qaz3uS6j3L4zPwv7CqDEiC433YOgAdaFekGJmjoAO60quMg6l/exec?f="
     private lateinit var oldVersion: String
     private val helper = Databeas(this)
 
-    // 画面の描画
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // bindingの定義
+
         binding = ActivityMainBinding.inflate(layoutInflater)
 
         val pref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -46,83 +46,79 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 画面描画した後に実行するやつw
-    // 今回のプログラムのスタート！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-    // ここからコメントアウトを読みながら勉強してねw
+
     override fun onResume() {
         super.onResume()
-        getVersion(templateurl+"version") // 46行目のgetVersion関数の実行
+        getVersion(templateurl+"version")
+
     }
 
-    @UiThread // MainActivityで実行する宣言
-    // バージョンを取得する関数
+    @UiThread
     private fun getVersion(url: String) {
-        // コルーチンを実行する
         lifecycleScope.launch {
-            val result = getJson(url) // 65行目のgetJson関数の実行
-            getVersionPost(result) // 100行目のgetVersionPost関数の実行
+            val result = getJson(url)
+            getVersionPost(result)
         }
     }
 
     @UiThread
-    // データを取得する関数
     private fun getData(url: String) {
         lifecycleScope.launch {
-            val result = getJson(url) // 65行目のgetJson関数の実行
-            getDataPost(result) // 108行目のgetDataPost関数の実行
+            val result = getJson(url)
+            getDataPost(result)
         }
     }
 
-    @WorkerThread // MainActivityとは別のスレッドで実行する宣言
-    // 通信をしてデータを取得する関数
+    @WorkerThread
     private suspend fun getJson(url: String): String {
-        // ここら辺は難しいと思うからテンプレートみたいな感じって思ってもろてw
         val res = withContext(Dispatchers.IO) {
             var result = ""
-            val url = URL(url) // URLクラスにする
+            val url = URL(url)
             val con = url.openConnection() as? HttpURLConnection
             con?.let {
                 try {
-                    it.connectTimeout = 10000 // 通信する時間の設定
-                    it.readTimeout = 10000 // 通信して読む時間の設定
-                    it.requestMethod = "GET" // 通信の種類
+                    it.connectTimeout = 10000
+                    it.readTimeout = 10000
+                    it.requestMethod = "GET"
                     it.connect()
 
                     val stream = it.inputStream
-                    result = extendString(stream) // 93行目のextendString関数の実行
+                    result = extendString(stream)
                     stream.close()
                 } catch(ex: SocketTimeoutException) {
-                    // 通信する時間を超えた場合の処理
                     println("通信タイムアウト")
                 }
-                it.disconnect() // 通信を解除
+                it.disconnect()
             }
             result
         }
-        return res // 1回目は49行目に戻る 2回目は58行目に戻る
+        return res
     }
 
-    // InputStream型をString型に変更する関数
     private fun extendString(stream: InputStream?) : String {
         val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
         return reader.readText()
     }
 
     @UiThread
-    // バージョンをネットから取得したのちに実行する関数
     private fun getVersionPost(result: String) {
         val newVersion = JSONObject(result).getString("version")
         if (oldVersion != newVersion) {
+            val db = helper.writableDatabase
+            val delete = """
+                DELETE FROM ryota;
+            """.trimIndent()
+            val stmt = db.compileStatement(delete)
+            stmt.executeUpdateDelete()
+
             val pref = PreferenceManager.getDefaultSharedPreferences(this)
             pref.edit().putString("version", newVersion).apply()
             getData(templateurl + "data")
         }
 
-         // 56行目のgetData関数の実行
     }
 
     @UiThread
-    // データをネットから取得したのちに実行する関数
     private fun getDataPost(result: String) {
         val rootData = JSONArray(result)
         val db = helper.writableDatabase
